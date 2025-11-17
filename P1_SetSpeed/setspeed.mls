@@ -1,0 +1,31 @@
+node setspeed(cmd : int; accel : int; decel : int) returns (speed : int)
+var delta : int; prev_speed : int; v : bool; v_1 : int; v_2 : bool;
+    v_3 : int; v_4 : bool; v_5 : int; v_6 : int; v_7 : bool; v_8 : int;
+    v_9 : bool; v_10 : int; v_11 : int; v_12 : int; v_13 : int; v_14 : int;
+let
+  speed = (prev_speed + delta);
+  delta = if v_2 then v_6 else v_14;
+  v_14 = if v_7 then v_13 else 0;
+  v_13 = if v_9 then v_11 else v_12;
+  v_12 = ~-(decel);
+  v_11 = ~-(v_10);
+  v_10 = (prev_speed - cmd);
+  v_9 = (v_8 < decel);
+  v_8 = (prev_speed - cmd);
+  v_7 = (prev_speed > cmd);
+  v_6 = if v_4 then v_5 else accel;
+  v_5 = (cmd - prev_speed);
+  v_4 = (v_3 < accel);
+  v_3 = (cmd - prev_speed);
+  v_2 = (prev_speed < cmd);
+  prev_speed = if v then 0 else v_1;
+  v_1 = pre speed;
+  v = true fby false
+tel
+
+node main(cmd_in : int; accel_in : int; decel_in : int)
+returns (speed_out : int)
+let
+  speed_out = setspeed(cmd_in, accel_in, decel_in)
+tel
+

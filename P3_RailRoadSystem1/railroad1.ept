@@ -1,0 +1,96 @@
+-- ============================================================
+--  P3: RailRoadSystem1 — CAUSALITY FIXED VERSION
+-- ============================================================
+
+node train_node(approach: bool; grant_in: bool)
+returns (st: int; req: bool; on_bridge: bool)
+var
+  tcount: int;
+  next_tcount: int;
+let
+  tcount = 0 -> pre next_tcount;
+
+  automaton
+
+    state Away
+      do
+        st = 0;
+        req = false;
+        on_bridge = false;
+        next_tcount = 0;
+      until approach then Wait
+
+    state Wait
+      do
+        st = 1;
+        req = true;
+        on_bridge = false;
+        next_tcount = 0;
+      until grant_in then Bridge
+
+    state Bridge
+      do
+        st = 2;
+        req = false;
+        on_bridge = true;
+        next_tcount = tcount + 1;
+      until (tcount >= 2) then Away
+
+  end
+tel
+
+
+node controller1(req_w: bool; req_e: bool; onw: bool; one: bool)
+returns (gw: bool; ge: bool)
+var
+  cur: int;
+  next_cur: int;
+let
+  cur = 0 -> pre next_cur;
+
+  gw = (cur = 1) or (cur = 0 and req_w);
+  ge = (cur = 2) or (cur = 0 and (not req_w) and req_e);
+
+  next_cur =
+    if onw then 1
+    else if one then 2
+    else if req_w then 1
+    else if req_e then 2
+    else 0;
+tel
+
+
+-- ============================================================
+-- CAUSAL COMPOSITION (cycle broken with delayed grants)
+-- ============================================================
+
+node railroad1(aw: bool; ae: bool)
+returns (sw: int; se: int; gw: bool; ge: bool)
+var
+  req_w: bool;
+  req_e: bool;
+  onw: bool;
+  one: bool;
+
+  -- delayed (past-tick) grants fed into trains
+  gw_in: bool;
+  ge_in: bool;
+let
+  -- 1 tick delay on controller grants:
+  gw_in = false -> pre gw;
+  ge_in = false -> pre ge;
+
+  -- trains use delayed grants
+  (sw, req_w, onw) = train_node(aw, gw_in);
+  (se, req_e, one) = train_node(ae, ge_in);
+
+  -- controller computes grants for NEXT tick
+  (gw, ge) = controller1(req_w, req_e, onw, one);
+tel
+
+
+node main(aw: bool; ae: bool)
+returns (sw: int; se: int; gw: bool; ge: bool)
+let
+  (sw, se, gw, ge) = railroad1(aw, ae);
+tel

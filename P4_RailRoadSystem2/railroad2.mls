@@ -1,0 +1,121 @@
+type st = St_Wait|St_Bridge|St_Away
+node train_node(approach : bool; grant_in : bool)
+returns (st : int; req : bool; on_bridge : bool)
+var tcount : int; pnr : bool; nr : bool; r : bool; ns : st; ck : st;
+    st_St_Away : int; req_St_Away : bool; on_bridge_St_Away : bool;
+    tcount_St_Away : int; ns_St_Away : st; nr_St_Away : bool;
+    st_St_Wait : int; req_St_Wait : bool; on_bridge_St_Wait : bool;
+    tcount_St_Wait : int; ns_St_Wait : st; nr_St_Wait : bool;
+    st_St_Bridge : int; req_St_Bridge : bool; on_bridge_St_Bridge : bool;
+    tcount_St_Bridge : int; ns_St_Bridge : st; nr_St_Bridge : bool; v : bool;
+    v_1 : bool; v_2 : bool; v_3 : int; v_4 : int;
+let
+  r = pnr;
+  pnr = false fby nr;
+  ck = St_Away fby ns;
+  tcount_St_Away = 0;
+  on_bridge_St_Away = false;
+  req_St_Away = false;
+  st_St_Away = 0;
+  nr_St_Away = if (approach when St_Away(ck)) then true else false;
+  ns_St_Away = if (approach when St_Away(ck)) then St_Wait else St_Away;
+  tcount_St_Wait = 0;
+  on_bridge_St_Wait = false;
+  req_St_Wait = true;
+  st_St_Wait = 1;
+  nr_St_Wait = if (grant_in when St_Wait(ck)) then true else false;
+  ns_St_Wait = if (grant_in when St_Wait(ck)) then St_Bridge else St_Wait;
+  tcount_St_Bridge = if v_2 then 0 else v_4;
+  v_4 = pre v_3;
+  v_3 = ((tcount when St_Bridge(ck)) + 1);
+  v_2 = (v_1 or (r when St_Bridge(ck)));
+  v_1 = true fby false;
+  on_bridge_St_Bridge = true;
+  req_St_Bridge = false;
+  st_St_Bridge = 2;
+  nr_St_Bridge = if v then true else false;
+  ns_St_Bridge = if v then St_Away else St_Bridge;
+  v = ((tcount when St_Bridge(ck)) >= 3);
+  st =
+    merge ck
+      (St_Bridge -> st_St_Bridge)(St_Wait -> st_St_Wait)
+      (St_Away -> st_St_Away);
+  req =
+    merge ck
+      (St_Bridge -> req_St_Bridge)(St_Wait -> req_St_Wait)
+      (St_Away -> req_St_Away);
+  on_bridge =
+    merge ck
+      (St_Bridge -> on_bridge_St_Bridge)(St_Wait -> on_bridge_St_Wait)
+      (St_Away -> on_bridge_St_Away);
+  tcount =
+    merge ck
+      (St_Bridge -> tcount_St_Bridge)(St_Wait -> tcount_St_Wait)
+      (St_Away -> tcount_St_Away);
+  ns =
+    merge ck
+      (St_Bridge -> ns_St_Bridge)(St_Wait -> ns_St_Wait)
+      (St_Away -> ns_St_Away);
+  nr =
+    merge ck
+      (St_Bridge -> nr_St_Bridge)(St_Wait -> nr_St_Wait)
+      (St_Away -> nr_St_Away)
+tel
+
+node controller2(req_w : bool; req_e : bool; onw : bool; one : bool)
+returns (grant_w : bool; grant_e : bool)
+var last_side : int; prev_last_side : int; cur : int; prev_cur : int;
+    v : bool; v_5 : int; v_6 : bool; v_7 : int; v_8 : bool; v_9 : bool;
+    v_10 : bool; v_11 : bool; v_12 : bool; v_13 : bool; v_14 : int;
+    v_15 : int; v_16 : int; v_17 : int; v_18 : int; v_19 : bool; v_20 : bool;
+    v_21 : int;
+let
+  grant_e = (cur = 2);
+  grant_w = (cur = 1);
+  last_side = if v_19 then 1 else v_21;
+  v_21 = if v_20 then 2 else prev_last_side;
+  v_20 = (cur = 2);
+  v_19 = (cur = 1);
+  cur = if v_9 then 1 else v_18;
+  v_18 = if v_11 then 2 else v_17;
+  v_17 = if v_12 then v_14 else v_16;
+  v_16 = if req_w then 1 else v_15;
+  v_15 = if req_e then 2 else 0;
+  v_14 = if v_13 then 2 else 1;
+  v_13 = (prev_last_side = 1);
+  v_12 = (req_w & req_e);
+  v_11 = (one & v_10);
+  v_10 = (prev_cur = 2);
+  v_9 = (onw & v_8);
+  v_8 = (prev_cur = 1);
+  prev_last_side = if v_6 then 0 else v_7;
+  v_7 = pre last_side;
+  v_6 = true fby false;
+  prev_cur = if v then 0 else v_5;
+  v_5 = pre cur;
+  v = true fby false
+tel
+
+node railroad2(approach_w : bool; approach_e : bool)
+returns (st_w : int; st_e : int; grant_w : bool; grant_e : bool)
+var grant_e_d : bool; grant_w_d : bool; one : bool; onw : bool; req_e : bool;
+    req_w : bool; v : bool; v_22 : bool; v_23 : bool; v_24 : bool;
+let
+  (grant_w, grant_e) = controller2(req_w, req_e, onw, one);
+  (st_e, req_e, one) = train_node(approach_e, grant_e_d);
+  (st_w, req_w, onw) = train_node(approach_w, grant_w_d);
+  grant_e_d = if v_23 then false else v_24;
+  v_24 = pre grant_e;
+  v_23 = true fby false;
+  grant_w_d = if v then false else v_22;
+  v_22 = pre grant_w;
+  v = true fby false
+tel
+
+node main(approach_w_in : bool; approach_e_in : bool)
+returns (st_w_out : int; st_e_out : int; gw_out : bool; ge_out : bool)
+let
+  (st_w_out, st_e_out, gw_out, ge_out) =
+    railroad2(approach_w_in, approach_e_in)
+tel
+

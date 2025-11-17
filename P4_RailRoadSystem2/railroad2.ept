@@ -1,0 +1,114 @@
+-- ============================================================
+-- P4: RailRoadSystem2  = controller2 || trainw || traine
+-- ============================================================
+
+-- ============================================================
+-- TRAIN NODE (corrected tcount handling)
+-- ============================================================
+
+node train_node(approach: bool; grant_in: bool)
+returns (st: int; req: bool; on_bridge: bool)
+var
+  tcount: int;
+let
+  automaton
+
+    state Away
+      do
+        st = 0;
+        req = false;
+        on_bridge = false;
+        tcount = 0;
+      until approach then Wait
+
+    state Wait
+      do
+        st = 1;
+        req = true;
+        on_bridge = false;
+        tcount = 0;
+      until grant_in then Bridge
+
+    state Bridge
+      do
+        st = 2;
+        req = false;
+        on_bridge = true;
+        tcount = 0 -> pre (tcount + 1);
+      until (tcount >= 3) then Away
+
+  end
+tel
+
+-- ============================================================
+-- CONTROLLER2: fair alternation
+-- ============================================================
+
+node controller2(req_w: bool; req_e: bool; onw: bool; one: bool)
+returns (grant_w: bool; grant_e: bool)
+var
+  prev_cur: int;
+  cur: int;
+  prev_last_side: int;
+  last_side: int;
+let
+  prev_cur = 0 -> pre cur;
+  prev_last_side = 0 -> pre last_side;
+
+  cur =
+    if onw and prev_cur = 1 then 1
+    else if one and prev_cur = 2 then 2
+    else
+      if req_w and req_e then
+        (if prev_last_side = 1 then 2 else 1)
+      else if req_w then 1
+      else if req_e then 2
+      else 0;
+
+  last_side =
+    if cur = 1 then 1
+    else if cur = 2 then 2
+    else prev_last_side;
+
+  grant_w = (cur = 1);
+  grant_e = (cur = 2);
+tel
+
+-- ============================================================
+-- SYSTEM COMPOSITION (CAUSALITY-FIXED VERSION)
+-- ============================================================
+
+node railroad2(approach_w: bool; approach_e: bool)
+returns (st_w: int; st_e: int; grant_w: bool; grant_e: bool)
+var
+  req_w: bool;
+  req_e: bool;
+  onw: bool;
+  one: bool;
+
+  grant_w_d: bool;   -- delayed version for train inputs
+  grant_e_d: bool;
+let
+  -- the delayed grants break the causality loop
+  grant_w_d = false -> pre grant_w;
+  grant_e_d = false -> pre grant_e;
+
+  -- trains use DELAYED grants
+  (st_w, req_w, onw) = train_node(approach_w, grant_w_d);
+  (st_e, req_e, one) = train_node(approach_e, grant_e_d);
+
+  -- controller sees current requests & bridge occupancy
+  (grant_w, grant_e) = controller2(req_w, req_e, onw, one);
+tel
+
+
+-- ============================================================
+-- MAIN ENTRYPOINT
+-- ============================================================
+
+node main(approach_w_in: bool; approach_e_in: bool)
+returns (st_w_out: int; st_e_out: int; gw_out: bool; ge_out: bool)
+let
+  (st_w_out, st_e_out, gw_out, ge_out) =
+    railroad2(approach_w_in, approach_e_in);
+tel

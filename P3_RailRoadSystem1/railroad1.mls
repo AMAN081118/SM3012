@@ -1,0 +1,110 @@
+type st = St_Wait|St_Bridge|St_Away
+node train_node(approach : bool; grant_in : bool)
+returns (st : int; req : bool; on_bridge : bool)
+var next_tcount : int; tcount : int; pnr : bool; nr : bool; r : bool;
+    ns : st; v : bool; v_1 : int; ck : st; st_St_Away : int;
+    req_St_Away : bool; on_bridge_St_Away : bool; next_tcount_St_Away : int;
+    ns_St_Away : st; nr_St_Away : bool; st_St_Wait : int; req_St_Wait : bool;
+    on_bridge_St_Wait : bool; next_tcount_St_Wait : int; ns_St_Wait : st;
+    nr_St_Wait : bool; st_St_Bridge : int; req_St_Bridge : bool;
+    on_bridge_St_Bridge : bool; next_tcount_St_Bridge : int;
+    ns_St_Bridge : st; nr_St_Bridge : bool; v_2 : bool;
+let
+  r = pnr;
+  pnr = false fby nr;
+  ck = St_Away fby ns;
+  next_tcount_St_Away = 0;
+  on_bridge_St_Away = false;
+  req_St_Away = false;
+  st_St_Away = 0;
+  nr_St_Away = if (approach when St_Away(ck)) then true else false;
+  ns_St_Away = if (approach when St_Away(ck)) then St_Wait else St_Away;
+  next_tcount_St_Wait = 0;
+  on_bridge_St_Wait = false;
+  req_St_Wait = true;
+  st_St_Wait = 1;
+  nr_St_Wait = if (grant_in when St_Wait(ck)) then true else false;
+  ns_St_Wait = if (grant_in when St_Wait(ck)) then St_Bridge else St_Wait;
+  next_tcount_St_Bridge = ((tcount when St_Bridge(ck)) + 1);
+  on_bridge_St_Bridge = true;
+  req_St_Bridge = false;
+  st_St_Bridge = 2;
+  nr_St_Bridge = if v_2 then true else false;
+  ns_St_Bridge = if v_2 then St_Away else St_Bridge;
+  v_2 = ((tcount when St_Bridge(ck)) >= 2);
+  st =
+    merge ck
+      (St_Bridge -> st_St_Bridge)(St_Wait -> st_St_Wait)
+      (St_Away -> st_St_Away);
+  req =
+    merge ck
+      (St_Bridge -> req_St_Bridge)(St_Wait -> req_St_Wait)
+      (St_Away -> req_St_Away);
+  on_bridge =
+    merge ck
+      (St_Bridge -> on_bridge_St_Bridge)(St_Wait -> on_bridge_St_Wait)
+      (St_Away -> on_bridge_St_Away);
+  next_tcount =
+    merge ck
+      (St_Bridge -> next_tcount_St_Bridge)(St_Wait -> next_tcount_St_Wait)
+      (St_Away -> next_tcount_St_Away);
+  ns =
+    merge ck
+      (St_Bridge -> ns_St_Bridge)(St_Wait -> ns_St_Wait)
+      (St_Away -> ns_St_Away);
+  nr =
+    merge ck
+      (St_Bridge -> nr_St_Bridge)(St_Wait -> nr_St_Wait)
+      (St_Away -> nr_St_Away);
+  tcount = if v then 0 else v_1;
+  v_1 = pre next_tcount;
+  v = true fby false
+tel
+
+node controller1(req_w : bool; req_e : bool; onw : bool; one : bool)
+returns (gw : bool; ge : bool)
+var next_cur : int; cur : int; v : bool; v_3 : int; v_4 : bool; v_5 : bool;
+    v_6 : bool; v_7 : bool; v_8 : bool; v_9 : bool; v_10 : bool; v_11 : bool;
+    v_12 : int; v_13 : int; v_14 : int;
+let
+  next_cur = if onw then 1 else v_14;
+  v_14 = if one then 2 else v_13;
+  v_13 = if req_w then 1 else v_12;
+  v_12 = if req_e then 2 else 0;
+  ge = (v_7 or v_11);
+  v_11 = (v_10 & req_e);
+  v_10 = (v_8 & v_9);
+  v_9 = not(req_w);
+  v_8 = (cur = 0);
+  v_7 = (cur = 2);
+  gw = (v_4 or v_6);
+  v_6 = (v_5 & req_w);
+  v_5 = (cur = 0);
+  v_4 = (cur = 1);
+  cur = if v then 0 else v_3;
+  v_3 = pre next_cur;
+  v = true fby false
+tel
+
+node railroad1(aw : bool; ae : bool)
+returns (sw : int; se : int; gw : bool; ge : bool)
+var ge_in : bool; gw_in : bool; one : bool; onw : bool; req_e : bool;
+    req_w : bool; v : bool; v_15 : bool; v_16 : bool; v_17 : bool;
+let
+  (gw, ge) = controller1(req_w, req_e, onw, one);
+  (se, req_e, one) = train_node(ae, ge_in);
+  (sw, req_w, onw) = train_node(aw, gw_in);
+  ge_in = if v_16 then false else v_17;
+  v_17 = pre ge;
+  v_16 = true fby false;
+  gw_in = if v then false else v_15;
+  v_15 = pre gw;
+  v = true fby false
+tel
+
+node main(aw : bool; ae : bool)
+returns (sw : int; se : int; gw : bool; ge : bool)
+let
+  (sw, se, gw, ge) = railroad1(aw, ae)
+tel
+

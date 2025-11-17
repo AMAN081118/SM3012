@@ -1,0 +1,28 @@
+node updated_setspeed(cmd: int; accel: int; decel: int; pause: bool)
+returns (speed: int; effective_delta: int)
+var
+  prev_speed: int;
+  delta: int;
+let
+  prev_speed = 0 -> pre speed;
+
+  -- When paused: speed does not change
+  delta =
+    if pause then
+      0
+    else if prev_speed < cmd then
+      (if cmd - prev_speed < accel then cmd - prev_speed else accel)
+    else if prev_speed > cmd then
+      (if prev_speed - cmd < decel then -(prev_speed - cmd) else -decel)
+    else
+      0;
+
+  speed = prev_speed + delta;
+  effective_delta = delta;
+tel
+
+node main(cmd_in: int; accel_in: int; decel_in: int; pause_in: bool)
+returns (speed_out: int; delta_out: int)
+let
+  (speed_out, delta_out) = updated_setspeed(cmd_in, accel_in, decel_in, pause_in);
+tel

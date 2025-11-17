@@ -1,0 +1,24 @@
+node setspeed(cmd: int; accel: int; decel: int) 
+returns (speed: int)
+var
+  prev_speed: int;
+  delta: int;
+let
+  prev_speed = 0 -> pre speed;
+
+  delta =
+    if prev_speed < cmd then
+       (if cmd - prev_speed < accel then cmd - prev_speed else accel)
+    else if prev_speed > cmd then
+       (if prev_speed - cmd < decel then -(prev_speed - cmd) else -decel)
+    else 0;
+
+  speed = prev_speed + delta;
+
+tel
+
+node main(cmd_in: int; accel_in: int; decel_in: int)
+returns (speed_out: int)
+let
+  speed_out = setspeed(cmd_in, accel_in, decel_in);
+tel
