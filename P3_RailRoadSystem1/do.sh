@@ -43,7 +43,7 @@ case "$FOLDER" in
     INPUT_FILE="input_p3.csv"
     OUTPUT_FILE="output_p3.csv"
     TABLE_NAME="railroad_log_p3"
-    C_FOLDER="railroad1c"
+    C_FOLDER="railroad1c/railroad1_c"
     WRAPPER="railroad1_wrapper.c"
     MAIN_SRC="main_sim_p3.c"
     ;;
